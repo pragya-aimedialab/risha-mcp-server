@@ -1,0 +1,19 @@
+{
+  "name": "risha-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for the Risha.ai API generated from Swagger/OpenAPI.",
+  "type": "module",
+  "bin": {
+    "risha-mcp-server": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "zod": "^3.25.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,8 +1,8 @@
 # Risha.ai MCP Server
 
-A Model Context Protocol (MCP) server for the Risha.ai API, generated from the Risha Swagger/OpenAPI document.
+A Model Context Protocol (MCP) server for the Risha.ai API.
 
-This server lets MCP clients such as **Codex**, **Claude Code**, and Claude Desktop discover Risha API operations, authenticate with email/password, inspect capabilities, check credit balance, create generation requests, and resolve private Risha media URLs to public signed CDN URLs.
+This server lets MCP clients such as **Codex**, **Claude Code**, and Claude Desktop discover Risha API operations, authenticate with email/password, inspect capabilities, check credit balance and create generation requests.
 
 ## Features
 
@@ -17,14 +17,11 @@ This server lets MCP clients such as **Codex**, **Claude Code**, and Claude Desk
   - `risha_generate_image`
   - `risha_create_generation`
 - Automatic polling for generation completion
-- Automatic private media URL resolution:
-  - converts `https://adminxcore-api.risha.ai/api/media/asset/...`
-  - into public signed CDN URLs such as `https://cdn.risha.ai/...`
 
 ## Requirements
 
 - Node.js 18+
-- A valid Risha.ai account
+- A valid Risha.ai account (www.risha.ai)
 - An MCP-capable client, for example:
   - Codex
   - Claude Code
@@ -35,13 +32,6 @@ This server lets MCP clients such as **Codex**, **Claude Code**, and Claude Desk
 ```bash
 git clone https://github.com/aimedialab/risha-mcp-server.git
 cd risha-mcp-server
-npm install
-```
-
-If you are using the local copy created by this agent:
-
-```bash
-cd /Users/amirhamdani/Documents/risha-mcp-server
 npm install
 ```
 
@@ -277,10 +267,6 @@ Use the Risha MCP server and list image capabilities.
 Use Risha MCP to generate a small image of a red apple on a white table.
 ```
 
-```text
-Use Risha MCP to resolve this media URL: https://adminxcore-api.risha.ai/api/media/asset/...
-```
-
 ## Use with Claude Code
 
 Claude Code supports MCP servers over stdio. You can add the server using either the CLI or JSON configuration.
@@ -384,13 +370,6 @@ Default polling values:
 
 - `timeoutSeconds`: `300`
 - `pollSeconds`: `5`
-
-## Security
-
-- Do not commit real Risha credentials.
-- Prefer MCP client environment variables over hardcoded credentials.
-- Public signed CDN URLs may expire depending on the Risha storage/CDN configuration.
-- Treat generated private media URLs as authenticated resources.
 
 ## Development
 

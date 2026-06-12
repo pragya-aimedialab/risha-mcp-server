@@ -33,7 +33,7 @@ This server lets MCP clients such as **Codex**, **Claude Code**, and Claude Desk
 ## Install
 
 ```bash
-git clone <YOUR_GITHUB_REPO_URL>
+git clone https://github.com/aimedialab/risha-mcp-server.git
 cd risha-mcp-server
 npm install
 ```

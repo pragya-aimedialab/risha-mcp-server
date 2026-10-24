@@ -2,7 +2,12 @@
 
 A Model Context Protocol (MCP) server for the Risha.ai API.
 
-This server lets MCP clients such as **Codex**, **Claude Code**, and Claude Desktop discover Risha API operations, authenticate with email/password, inspect capabilities, check credit balance and create generation requests.
+This server lets MCP clients such as **Codex**, **Claude Code**, Claude Desktop, Claude.ai and ChatGPT discover Risha API operations, inspect capabilities, check credit balance and create generation requests.
+
+It runs in two modes:
+
+- **Local (stdio)**, the default: you run it on your machine and it signs in with your email/password or an API token from environment variables.
+- **Hosted (Streamable HTTP)**: one shared server at a URL such as `https://mcp.risha.ai/mcp`. Each user signs in with their own Risha account through OAuth in their MCP client; no credentials are stored on the server. See [Hosted mode](#hosted-mode-streamable-http--oauth).
 
 ## Features
 
@@ -73,6 +78,77 @@ Expected startup log:
 
 An MCP stdio server normally waits silently after startup. That is expected.
 
+## Hosted mode (Streamable HTTP + OAuth)
+
+Set `MCP_TRANSPORT=http` to serve MCP over Streamable HTTP at `/mcp` instead of stdio.
+
+In this mode the server is an OAuth 2.1 *resource server*. Risha (`RISHA_OAUTH_ISSUER`) is the authorization server: the MCP client discovers it, registers itself, signs the user in (authorization code + PKCE) and refreshes tokens on its own. The server only checks the bearer token on each request against Risha's `/auth/me/` endpoint (cached for 60 seconds per token) and then calls the Risha API as that user.
+
+- `POST|GET|DELETE /mcp` – MCP endpoint. Requests without a valid `Authorization: Bearer` token get `401` with `WWW-Authenticate: Bearer resource_metadata="…"`, which tells the client where to start the OAuth flow.
+- `GET /.well-known/oauth-protected-resource` (and `/.well-known/oauth-protected-resource/mcp`) – RFC 9728 protected resource metadata.
+- `GET /healthz` – liveness check.
+
+Each MCP session is bound to the Risha user who opened it; a request for that session with another user's token is rejected with `403`. Password login (`risha_login`) is disabled in this mode, and `risha_refresh_context` only reloads the user, capabilities and credits.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `MCP_TRANSPORT` | `stdio` | `http` for hosted mode |
+| `PORT` | `3000` | HTTP port |
+| `MCP_PUBLIC_URL` | `http://localhost:$PORT/mcp` | Public URL of the MCP endpoint, used as the OAuth `resource` |
+| `RISHA_API_BASE_URL` | `https://adminxcore-api.risha.ai/api` | Risha API base URL |
+| `RISHA_OAUTH_ISSUER` | origin of `RISHA_API_BASE_URL` | Risha OAuth authorization server |
+
+### Run locally
+
+```bash
+MCP_TRANSPORT=http PORT=3000 npm start
+```
+
+### Docker
+
+```bash
+docker build -t risha-mcp-server .
+docker run --rm -p 3000:3000 \
+  -e MCP_PUBLIC_URL="https://mcp.risha.ai/mcp" \
+  -e RISHA_API_BASE_URL="https://adminxcore-api.risha.ai/api" \
+  risha-mcp-server
+```
+
+The image runs as a non-root user with `MCP_TRANSPORT=http` and a `/healthz` health check. Put it behind HTTPS; OAuth clients require it for non-localhost URLs.
+
+### Connect a client to the hosted server
+
+In every client you only enter the server URL; the client opens a Risha sign-in page the first time you use it.
+
+- **Claude.ai / Claude Desktop**: Settings → Connectors → *Add custom connector*, then enter `https://mcp.risha.ai/mcp`.
+- **Claude Code**:
+
+  ```bash
+  claude mcp add --transport http risha https://mcp.risha.ai/mcp
+  ```
+
+  Then run `/mcp` in Claude Code and choose *Authenticate* for `risha`.
+- **ChatGPT**: Settings → Connectors (Apps) → *Create*, with `https://mcp.risha.ai/mcp` as the MCP server URL and OAuth as the authentication. Custom connectors are only available on some ChatGPT plans and may require developer mode to be enabled.
+- **Codex** (`~/.codex/config.toml`):
+
+  ```toml
+  [mcp_servers.risha]
+  url = "https://mcp.risha.ai/mcp"
+  ```
+
+  Then run `codex mcp login risha`.
+- **Cursor** (`~/.cursor/mcp.json`):
+
+  ```json
+  {
+    "mcpServers": {
+      "risha": { "url": "https://mcp.risha.ai/mcp" }
+    }
+  }
+  ```
+
 ## Available MCP tools
 
 ### `risha_api_info`
@@ -108,11 +184,11 @@ Returns credit balance, wallet, summary, and user wallet data.
 
 ### `risha_refresh_context`
 
-Logs in again and refreshes current user, capabilities, and credit data.
+Reloads the current user, capabilities, and credit data (in local mode, logs in again first if no token is cached).
 
 ### `risha_login`
 
-Manually logs in with `RISHA_EMAIL` and `RISHA_PASSWORD` and caches the JWT for the current MCP session.
+Manually logs in with `RISHA_EMAIL` and `RISHA_PASSWORD` and caches the JWT for the current MCP session. Local mode only; in hosted mode it explains that sign-in happens through the client's OAuth flow.
 
 ### `risha_list_operations`
 
@@ -375,7 +451,7 @@ Default polling values:
 
 ```bash
 npm install
-node --check src/index.js
+npm test
 npm start
 ```
 
@@ -384,8 +460,11 @@ Project layout:
 ```text
 risha-mcp-server/
   src/
-    index.js       # MCP server implementation
+    index.js       # MCP server implementation (stdio and HTTP)
     swagger.json   # Risha Swagger/OpenAPI document
+  test/
+    server.test.js # node --test suite against a mock Risha API
+  Dockerfile
   package.json
   README.md
 ```

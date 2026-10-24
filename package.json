@@ -7,10 +7,12 @@
     "risha-mcp-server": "src/index.js"
   },
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "start:http": "MCP_TRANSPORT=http node src/index.js",
+    "test": "node --test test/server.test.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.0"
   },
   "engines": {
